@@ -2,6 +2,8 @@ package com.example.varunbalachanthiran.taxicustomer.Enitity;
 
 import com.google.android.gms.maps.model.LatLng;
 
+import java.util.ArrayList;
+
 public class Order {
 
     static String distance;
@@ -13,6 +15,16 @@ public class Order {
     static boolean bicycles;
     static boolean extraLuggage;
     static LatLng pickUpPlaceCoordinates;
+
+    public static ArrayList getAllExtras() {
+        return allExtras;
+    }
+
+    public static void setAllExtras(ArrayList allExtras) {
+        Order.allExtras = allExtras;
+    }
+
+    static ArrayList allExtras;
 
     public static LatLng getPickUpPlaceCoordinates() {
         return pickUpPlaceCoordinates;
