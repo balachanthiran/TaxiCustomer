@@ -1,20 +1,35 @@
 package com.example.varunbalachanthiran.taxicustomer;
 
+import android.animation.ObjectAnimator;
+import android.animation.TypeEvaluator;
+import android.animation.ValueAnimator;
+import android.annotation.TargetApi;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.Point;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Property;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
+import android.widget.Toast;
 
+import com.directions.route.AbstractRouting;
+import com.directions.route.Route;
+import com.directions.route.RouteException;
+import com.directions.route.Routing;
+import com.directions.route.RoutingListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -25,15 +40,26 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-public class TrackerFragment extends Fragment implements OnMapReadyCallback {
+public class TrackerFragment extends Fragment implements OnMapReadyCallback, RoutingListener {
 
     GoogleMap mMap;
     MapView mMapView;
+    Polyline line;
     private View mView;
+    LatLng origin;
+    LatLng dest;
+    String KEY1 = "AIzaSyBod8LTgKLRnycwZI-qDNoR_cYo_T1kJPQ";
+    String KEY2 = "AIzaSyAPAX9ZKaC9pwklCwISzeBqmp6umINM8Fo";
+    String KEY3 = "AIzaSyDbo8JM_Nluc631AHvSJG77W8NWamHfnrM";
+    String KEY4 = "AIzaSyCmje-0G5PmooYaPrFaIlcYYtpUWGE15fo";
+    String KEY5 = "AIzaSyDouE0Hb7F2XVb_JZBt8gmg2ZrAsz71itA";
 
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         mView = inflater.inflate(R.layout.fragment_tracker, container, false);
@@ -58,54 +84,20 @@ public class TrackerFragment extends Fragment implements OnMapReadyCallback {
     public void onMapReady(GoogleMap googleMap) {
         MapsInitializer.initialize(getContext());
         mMap = googleMap;
+        origin = new LatLng(55.370617,10.4270541);
+        dest = new LatLng(55.401779,10.3845503);
+        mMap.addMarker(new MarkerOptions()
+                .position(origin)
+                .title("origin"));
+        mMap.addMarker(new MarkerOptions()
+                .position(dest)
+                .title("dest"));
         googleMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-        LatLng latLng = new LatLng(55.3935149, 10.3197138);
-        Marker marker = mMap.addMarker(new MarkerOptions()
-                .position(new LatLng(55.3935149,10.3197138))
-                .title("San Francisco")
-                .snippet("Population: 776733"));
-        animateMarker(marker, latLng, false);
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(marker.getPosition(), 5));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom((origin), 18.2f));
 
-
+        makeRoute();
     }
 
-    public void animateMarker(final Marker marker, final LatLng toPosition,
-                              final boolean hideMarker) {
-        final Handler handler = new Handler();
-        final long start = SystemClock.uptimeMillis();
-        Projection proj = mMap.getProjection();
-        Point startPoint = proj.toScreenLocation(marker.getPosition());
-        final LatLng startLatLng = proj.fromScreenLocation(startPoint);
-        final long duration = 500;
-
-        final Interpolator interpolator = new LinearInterpolator();
-
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                long elapsed = SystemClock.uptimeMillis() - start;
-                float t = interpolator.getInterpolation((float) elapsed
-                        / duration);
-                double lng = t * toPosition.longitude + (1 - t)
-                        * startLatLng.longitude;
-                double lat = t * toPosition.latitude + (1 - t)
-                        * startLatLng.latitude;
-                marker.setPosition(new LatLng(lat, lng));
-
-                if (t < 1.0) {
-                    // Post again 16ms later.
-                    handler.postDelayed(this, 16);
-                } else {
-                    if (hideMarker) {
-                        marker.setVisible(false);
-                    } else {
-                        marker.setVisible(true);
-                    }
-                }
-            }
-        });
-    }
 
     @Override
     public void onResume() {
@@ -116,5 +108,57 @@ public class TrackerFragment extends Fragment implements OnMapReadyCallback {
         super.onStop();
     }
 
+    private void makeRoute() {
+        try {
+            Routing routing = new Routing.Builder()
+                    .travelMode(Routing.TravelMode.DRIVING)
+                    .withListener(this)
+                    .waypoints(origin, dest)
+                    .key(KEY3)
+                    .build();
+            routing.execute();
+        } catch (Exception e) {
+            Toast.makeText(getActivity(), "Unable to Route", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onRoutingFailure(RouteException e) {
+        System.out.println("fail " + e);
+
+    }
+
+    @Override
+    public void onRoutingStart() {
+    }
+
+    @Override
+    public void onRoutingSuccess(ArrayList<com.directions.route.Route> arrayList, int i) {
+        try {
+            ArrayList points;
+            points = (ArrayList) arrayList.get(0).getPoints();
+            PolylineOptions options = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
+
+            Iterator<LatLng> iterator = points.iterator();
+            while (iterator.hasNext()) {
+                LatLng data = iterator.next();
+                options.add(data);
+            }
+            if (line != null) {
+                line.remove();
+            }
+            line = mMap.addPolyline(options);
+
+
+
+        } catch (Exception e) {
+            Toast.makeText(getActivity(), "EXCEPTION: Cannot parse routing response", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onRoutingCancelled() {
+
+    }
 
 }
