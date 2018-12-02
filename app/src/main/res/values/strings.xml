@@ -2,5 +2,5 @@
     <string name="app_name">TaxiCustomer</string>
     <string name="title_home">Order</string>
     <string name="title_dashboard">Track</string>
-    <string name="title_notifications">Call</string>
+    <string name="title_notifications">Track</string>
 </resources>

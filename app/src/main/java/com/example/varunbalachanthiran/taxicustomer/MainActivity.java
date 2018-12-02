@@ -22,9 +22,6 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.navigation_home:
                     fragment = new OrderFragment();
                     break;
-                case R.id.navigation_dashboard:
-                     fragment = new TrackerFragment();
-                     break;
                 case R.id.navigation_notifications:
                     fragment = new CallFragment();
                     break;

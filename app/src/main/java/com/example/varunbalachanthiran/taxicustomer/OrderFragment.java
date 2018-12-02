@@ -70,6 +70,7 @@ public class OrderFragment extends Fragment implements AdapterView.OnItemSelecte
     boolean bicycleSwitchStatus;
     boolean extraLuggageSwitchStatus;
     LatLng pickUpCoordinates;
+    LatLng destinationCoordinates;
     Spinner spinner;
     String item;
     ArrayList allExtras;
@@ -285,6 +286,7 @@ public class OrderFragment extends Fragment implements AdapterView.OnItemSelecte
                 Place place = PlaceAutocomplete.getPlace(getActivity(), data);
                 Log.i(TAG, "Place: " + place.getName());
                 destinationAddress.setText(place.getAddress());
+                destinationCoordinates = place.getLatLng();
             } else if (resultCode == PlaceAutocomplete.RESULT_ERROR) {
                 Status status = PlaceAutocomplete.getStatus(getActivity(), data);
                 // TODO: Handle the error.
@@ -382,6 +384,7 @@ public class OrderFragment extends Fragment implements AdapterView.OnItemSelecte
                     Order.setDistance(estimatedDistance.getText().toString());
                     Order.setEstimatedCost(estimatedCost.getText().toString());
                     Order.setPickUpPlaceCoordinates(pickUpCoordinates);
+                    Order.setDestinationCoordinates(destinationCoordinates);
                     Order.setAllExtras(allExtras);
                     Vehicle.setCarType(item);
                     Toast.makeText(getActivity(), "Order bekræftet", Toast.LENGTH_LONG).show();

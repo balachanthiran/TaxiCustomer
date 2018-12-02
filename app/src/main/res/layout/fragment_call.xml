@@ -204,8 +204,16 @@
             android:layout_height="1dp"
             android:background="#f9d7db" />
 
-
-
+        <Button
+            android:id="@+id/track"
+            android:background="@drawable/new_button"
+            android:padding="16dp"
+            android:textColor="#FFFF"
+            android:layout_marginTop="315dp"
+            android:layout_width="match_parent"
+            android:gravity="center"
+            android:layout_height="wrap_content"
+            android:text="Track taxi" />
 
 
     </android.support.v7.widget.CardView>

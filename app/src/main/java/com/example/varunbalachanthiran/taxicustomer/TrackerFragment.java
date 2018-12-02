@@ -1,47 +1,39 @@
 package com.example.varunbalachanthiran.taxicustomer;
 
-import android.animation.ObjectAnimator;
-import android.animation.TypeEvaluator;
 import android.animation.ValueAnimator;
-import android.annotation.TargetApi;
-import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.Point;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
-import android.support.v7.app.AppCompatActivity;
-import android.util.Property;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
 
-import com.directions.route.AbstractRouting;
-import com.directions.route.Route;
 import com.directions.route.RouteException;
 import com.directions.route.Routing;
 import com.directions.route.RoutingListener;
+import com.example.varunbalachanthiran.taxicustomer.Enitity.Order;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.SquareCap;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -49,51 +41,54 @@ import java.util.List;
 
 public class TrackerFragment extends Fragment implements OnMapReadyCallback, RoutingListener {
 
-    GoogleMap mMap;
-    MapView mMapView;
-    Polyline line;
+    private GoogleMap mMap;
+    private MapView mMapView;
+    private Polyline blackPolyline;
     private View mView;
-    LatLng origin;
-    LatLng dest;
-    String KEY1 = "AIzaSyBod8LTgKLRnycwZI-qDNoR_cYo_T1kJPQ";
-    String KEY2 = "AIzaSyAPAX9ZKaC9pwklCwISzeBqmp6umINM8Fo";
-    String KEY3 = "AIzaSyDbo8JM_Nluc631AHvSJG77W8NWamHfnrM";
-    String KEY4 = "AIzaSyCmje-0G5PmooYaPrFaIlcYYtpUWGE15fo";
-    String KEY5 = "AIzaSyDouE0Hb7F2XVb_JZBt8gmg2ZrAsz71itA";
+    private Handler handler;
+    private int index;
+    private int next;
+    private float v;
+    private double lat, lng;
+    private Marker carMarker;
+    private LatLng startPosition, endPosition, pickUpPlaceCoordinates;
+    private List<LatLng> polylineList;
+    private PolylineOptions blackPolylineOptions;
+
 
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         mView = inflater.inflate(R.layout.fragment_tracker, container, false);
         return mView;
     }
 
-
-
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         mMapView = mView.findViewById(R.id.map);
-        if(mMapView != null) {
+        if (mMapView != null) {
             mMapView.onCreate(null);
             mMapView.onResume();
             mMapView.getMapAsync(this);
         }
+        polylineList = new ArrayList<>();
+        pickUpPlaceCoordinates = Order.getPickUpPlaceCoordinates();
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         MapsInitializer.initialize(getContext());
         mMap = googleMap;
-        origin = new LatLng(55.370617,10.4270541);
-        dest = new LatLng(55.401779,10.3845503);
+        startPosition = new LatLng(55.370617, 10.4270541);
+        endPosition = new LatLng(55.401779, 10.3845503);
         mMap.addMarker(new MarkerOptions()
-                .position(origin)
-                .title("origin"));
+                .position(pickUpPlaceCoordinates)
+                .title("Afhentning").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
         mMap.addMarker(new MarkerOptions()
-                .position(dest)
-                .title("dest"));
+                .position(Order.getDestinationCoordinates())
+                .title("Destination"));
         googleMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom((origin), 18.2f));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom((startPosition), 18.2f));
 
         makeRoute();
     }
@@ -103,22 +98,27 @@ public class TrackerFragment extends Fragment implements OnMapReadyCallback, Rou
     public void onResume() {
         super.onResume();
     }
+
     @Override
     public void onStop() {
         super.onStop();
     }
 
     private void makeRoute() {
-        try {
-            Routing routing = new Routing.Builder()
-                    .travelMode(Routing.TravelMode.DRIVING)
-                    .withListener(this)
-                    .waypoints(origin, dest)
-                    .key(KEY3)
-                    .build();
-            routing.execute();
-        } catch (Exception e) {
-            Toast.makeText(getActivity(), "Unable to Route", Toast.LENGTH_SHORT).show();
+        if (Order.getPickUpPlaceCoordinates() != null) {
+            try {
+                Routing routing = new Routing.Builder()
+                        .travelMode(Routing.TravelMode.DRIVING)
+                        .withListener(this)
+                        .waypoints(startPosition, pickUpPlaceCoordinates)
+                        .key("AIzaSyAA7Z1CpXCo7KAFRzyWRuXR8EayP4KclQo")
+                        .build();
+                routing.execute();
+            } catch (Exception e) {
+                Toast.makeText(getActivity(), "Unable to Route", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(getActivity(), "No order is made", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -133,22 +133,64 @@ public class TrackerFragment extends Fragment implements OnMapReadyCallback, Rou
     }
 
     @Override
-    public void onRoutingSuccess(ArrayList<com.directions.route.Route> arrayList, int i) {
+    public void onRoutingSuccess(final ArrayList<com.directions.route.Route> arrayList, final int i) {
         try {
-            ArrayList points;
-            points = (ArrayList) arrayList.get(0).getPoints();
-            PolylineOptions options = new PolylineOptions().width(5).color(Color.BLUE).geodesic(true);
+            polylineList = arrayList.get(i).getPoints();
 
-            Iterator<LatLng> iterator = points.iterator();
-            while (iterator.hasNext()) {
-                LatLng data = iterator.next();
-                options.add(data);
-            }
-            if (line != null) {
-                line.remove();
-            }
-            line = mMap.addPolyline(options);
+            blackPolylineOptions = new PolylineOptions();
+            blackPolylineOptions.color(Color.BLACK);
+            blackPolylineOptions.width(5);
+            blackPolylineOptions.addAll(polylineList);
+            blackPolyline = mMap.addPolyline(blackPolylineOptions);
 
+            //Add car marker
+            carMarker = mMap.addMarker(new MarkerOptions().position(startPosition).flat(true).title("Taxi").icon(BitmapDescriptorFactory.fromResource(R.drawable.car)));
+            //car moving
+            handler = new Handler();
+            index = 0;
+            next = 1;
+
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (index < polylineList.size() - 1) {
+                        index++;
+                        next = index + 1;
+                    }
+                    if (index < polylineList.size() - 1) {
+                        startPosition = polylineList.get(index);
+                        pickUpPlaceCoordinates = polylineList.get(next);
+                    }
+
+                    ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
+                    valueAnimator.setDuration(1000);
+                    valueAnimator.setInterpolator(new LinearInterpolator());
+                    valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                        @Override
+                        public void onAnimationUpdate(ValueAnimator animation) {
+                            v = animation.getAnimatedFraction();
+                            lng = v * pickUpPlaceCoordinates.longitude + (1 - v) * startPosition.longitude;
+                            lat = v * pickUpPlaceCoordinates.latitude + (1 - v) * startPosition.latitude;
+                            LatLng newPos = new LatLng(lat, lng);
+                            carMarker.setPosition(newPos);
+                            carMarker.setAnchor(0.5f, 0.5f);
+                            //carMarker.setRotation(getBearing(startPosition, newPos));
+                            float rotation = getBearing(startPosition, newPos);
+                            if (carMarker.getRotation() > rotation) {
+                                carMarker.setRotation(carMarker.getRotation() - animation.getAnimatedFraction());
+                            } else {
+                                carMarker.setRotation(carMarker.getRotation() + animation.getAnimatedFraction());
+                            }
+                            //mMap.moveCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder().target(newPos).zoom(15.5f).build()));
+
+                        }
+                    });
+                    valueAnimator.start();
+                    handler.postDelayed(this, 1000);
+
+
+                }
+            }, 1000);
 
 
         } catch (Exception e) {
@@ -160,5 +202,21 @@ public class TrackerFragment extends Fragment implements OnMapReadyCallback, Rou
     public void onRoutingCancelled() {
 
     }
+
+    //Courtesy of Google Inc.
+    private float getBearing(LatLng orign, LatLng dest) {
+        double lat = Math.abs(orign.latitude - dest.latitude);
+        double lng = Math.abs(orign.longitude - dest.longitude);
+        if (orign.latitude < dest.latitude && orign.longitude < dest.longitude)
+            return (float) (Math.toDegrees(Math.atan(lng / lat)));
+        else if (orign.latitude >= dest.latitude && orign.longitude < dest.longitude)
+            return (float) ((90 - Math.toDegrees(Math.atan(lng / lat))) + 90);
+        else if (orign.latitude >= dest.latitude && orign.longitude >= dest.longitude)
+            return (float) (Math.toDegrees(Math.atan(lng / lat)) + 180);
+        else if (orign.latitude < dest.latitude && orign.longitude >= dest.longitude)
+            return (float) ((90 - Math.toDegrees(Math.atan(lng / lat))) + 270);
+        return -1;
+    }
+
 
 }

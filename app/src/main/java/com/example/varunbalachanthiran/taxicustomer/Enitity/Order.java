@@ -15,6 +15,15 @@ public class Order {
     static boolean bicycles;
     static boolean extraLuggage;
     static LatLng pickUpPlaceCoordinates;
+    static LatLng destinationCoordinates;
+
+    public static LatLng getDestinationCoordinates() {
+        return destinationCoordinates;
+    }
+
+    public static void setDestinationCoordinates(LatLng destinationCoordinates) {
+        Order.destinationCoordinates = destinationCoordinates;
+    }
 
     public static ArrayList getAllExtras() {
         return allExtras;
