@@ -403,37 +403,4 @@ public class OrderFragment extends Fragment implements AdapterView.OnItemSelecte
             }
         });
     }
-
-
-
-    /* @SuppressLint("MissingPermission")
-    private void getLocation(){
-        System.out.println("nigger1");
-        mFusedLocationClient.getLastLocation()
-                .addOnSuccessListener(getActivity(), new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        double latitude = location.getLatitude();
-                        double longitude = location.getLongitude();
-                        if (location != null) {
-                            try {
-                                Geocoder geo = new Geocoder(getActivity().getApplicationContext(), Locale.getDefault());
-                                List<Address> addresses = geo.getFromLocation(latitude, longitude, 1);
-                                if (addresses.isEmpty()) {
-                                } else {
-                                    if (addresses.size() > 0) {
-                                        String address = (addresses.get(0).getAddressLine(0));
-                                        pickUpAddress.setText(address);
-                                    }
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                });
-
-
-
-    }*/
 }
